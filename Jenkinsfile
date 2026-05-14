@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME    = 'noteflow-app'
-        IMAGE_TAG     = "${BUILD_NUMBER}"
-        DOCKERHUB_USER = 'tanmaydixit09'   // your Docker Hub username
+        IMAGE_NAME     = 'noteflow-app'
+        IMAGE_TAG      = "${BUILD_NUMBER}"
+        DOCKERHUB_USER = 'tanmaydixit09'
     }
 
     stages {
@@ -20,8 +20,8 @@ pipeline {
             steps {
                 echo '📦 Installing Python dependencies...'
                 sh '''
-                    python3 -m pip install --upgrade pip
-                    pip3 install -r requirements.txt
+                    python3 -m pip install --break-system-packages --upgrade pip
+                    pip3 install --break-system-packages -r requirements.txt
                 '''
             }
         }
@@ -30,7 +30,7 @@ pipeline {
             steps {
                 echo '🧪 Running unit tests...'
                 sh '''
-                    pip3 install pytest
+                    pip3 install --break-system-packages pytest
                     pytest test_app.py -v --tb=short
                 '''
             }
@@ -49,15 +49,19 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 echo '🚀 Pushing image to Docker Hub...'
+
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-credentials',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
+
                     sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+
                         docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
                         docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+
                         docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
                         docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                     """
@@ -75,19 +79,25 @@ pipeline {
                 '''
             }
         }
-
     }
 
     post {
+
         success {
-            echo '✅ Pipeline completed successfully! NoteFlow is live.'
+            echo '✅ Pipeline completed successfully! NoteFlow deployed successfully.'
         }
+
         failure {
-            echo '❌ Pipeline failed. Check the logs above.'
+            echo '❌ Pipeline failed. Check logs for details.'
         }
+
         always {
             echo '🧹 Cleaning up Docker images...'
-            sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+
+            sh """
+                docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
+                docker rmi ${IMAGE_NAME}:latest || true
+            """
         }
     }
 }
