@@ -5,7 +5,6 @@ pipeline {
         IMAGE_NAME     = 'noteflow-app'
         IMAGE_TAG      = "${BUILD_NUMBER}"
         DOCKERHUB_USER = 'tanmaydixit09'
-        PATH = "/var/jenkins_home/.local/bin:${env.PATH}"
     }
 
     stages {
@@ -24,6 +23,15 @@ pipeline {
                     python3 -m pip install --break-system-packages --upgrade pip
                     pip3 install --break-system-packages -r requirements.txt
                     pip3 install --break-system-packages pytest
+                '''
+            }
+        }
+
+        stage('Initialize Database') {
+            steps {
+                echo '🗄️ Initializing SQLite database...'
+                sh '''
+                    python3 init_db.py || true
                 '''
             }
         }
@@ -93,6 +101,7 @@ pipeline {
 
         always {
             echo '🧹 Cleaning up Docker images...'
+
             sh """
                 docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
                 docker rmi ${IMAGE_NAME}:latest || true
