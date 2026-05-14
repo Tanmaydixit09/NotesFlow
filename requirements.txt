@@ -1,2 +1,5 @@
 flask==3.0.3
 prometheus-client==0.20.0
+flask-limiter==3.5.0
+pyjwt==2.8.0
+requests==2.31.0
