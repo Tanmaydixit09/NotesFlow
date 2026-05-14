@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME     = 'noteflow-app'
         IMAGE_TAG      = "${BUILD_NUMBER}"
         DOCKERHUB_USER = 'tanmaydixit09'
+        PATH = "/var/jenkins_home/.local/bin:${env.PATH}"
     }
 
     stages {
@@ -22,6 +23,7 @@ pipeline {
                 sh '''
                     python3 -m pip install --break-system-packages --upgrade pip
                     pip3 install --break-system-packages -r requirements.txt
+                    pip3 install --break-system-packages pytest
                 '''
             }
         }
@@ -30,8 +32,7 @@ pipeline {
             steps {
                 echo '🧪 Running unit tests...'
                 sh '''
-                    pip3 install --break-system-packages pytest
-                    pytest test_app.py -v --tb=short
+                    python3 -m pytest test_app.py -v --tb=short
                 '''
             }
         }
@@ -57,7 +58,7 @@ pipeline {
                 )]) {
 
                     sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
                         docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
                         docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
@@ -75,7 +76,6 @@ pipeline {
                 sh '''
                     kubectl apply -f k8s/deployment.yaml
                     kubectl apply -f k8s/service.yaml
-                    kubectl rollout status deployment/noteflow-deployment
                 '''
             }
         }
@@ -84,7 +84,7 @@ pipeline {
     post {
 
         success {
-            echo '✅ Pipeline completed successfully! NoteFlow deployed successfully.'
+            echo '✅ Pipeline completed successfully!'
         }
 
         failure {
@@ -93,7 +93,6 @@ pipeline {
 
         always {
             echo '🧹 Cleaning up Docker images...'
-
             sh """
                 docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
                 docker rmi ${IMAGE_NAME}:latest || true
