@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
  
@@ -5,6 +6,7 @@ pipeline {
         IMAGE_NAME     = 'noteflow-app'
         IMAGE_TAG      = "${BUILD_NUMBER}"
         DOCKERHUB_USER = 'tanmaydixit09'
+        PYTHON         = 'C:\\Users\\tanma\\AppData\\Local\\Programs\\Python\\Python314\\python.exe'
     }
  
     stages {
@@ -19,21 +21,21 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo '📦 Installing Python dependencies...'
-                bat '''
-                    python --version
-                    python -m pip install --upgrade pip
-                    python -m pip install -r requirements.txt
-                    python -m pip install pytest
-                '''
+                bat """
+                    "%PYTHON%" --version
+                    "%PYTHON%" -m pip install --upgrade pip
+                    "%PYTHON%" -m pip install -r requirements.txt
+                    "%PYTHON%" -m pip install pytest
+                """
             }
         }
  
         stage('Run Tests') {
             steps {
                 echo '🧪 Running unit tests...'
-                bat '''
-                    python -m pytest test_app.py -v --tb=short
-                '''
+                bat """
+                    "%PYTHON%" -m pytest test_app.py -v --tb=short
+                """
             }
         }
  
@@ -92,3 +94,4 @@ pipeline {
         }
     }
 }
+ 
