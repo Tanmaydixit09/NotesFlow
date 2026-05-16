@@ -94,10 +94,13 @@ def test_add_note_missing_title(client):
  
 def test_delete_note(client):
     register_and_login(client)
-    add_res = client.post('/notes',
+    client.post('/notes',
         data=json.dumps({'title': 'To Delete', 'content': 'delete me'}),
         content_type='application/json')
-    note_id = json.loads(add_res.data)['id']
+    notes_res = client.get('/notes')
+    notes = json.loads(notes_res.data)['notes']
+    assert len(notes) > 0
+    note_id = notes[0]['id']
     res = client.delete(f'/notes/{note_id}')
     assert res.status_code == 200
  
