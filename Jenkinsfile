@@ -21,11 +21,11 @@ pipeline {
                 echo 'Installing Python dependencies...'
 
                 bat '''
-                    python -m pip install --upgrade pip
+                    py -m pip install --upgrade pip
 
-                    pip install -r requirements.txt
+                    py -m pip install -r requirements.txt
 
-                    pip install pytest
+                    py -m pip install pytest
                 '''
             }
         }
@@ -35,9 +35,9 @@ pipeline {
                 echo 'Initializing SQLite database...'
 
                 bat '''
-                    IF EXIST init_db.py (
-                        python init_db.py
-                    ) ELSE (
+                    if exist init_db.py (
+                        py init_db.py
+                    ) else (
                         echo init_db.py not found!
                         exit /b 1
                     )
@@ -50,7 +50,7 @@ pipeline {
                 echo 'Running unit tests...'
 
                 bat '''
-                    python -m pytest test_app.py -v --tb=short
+                    py -m pytest test_app.py -v --tb=short
                 '''
             }
         }
@@ -59,11 +59,11 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
 
-                bat """
+                bat '''
                     docker build -t %IMAGE_NAME%:%IMAGE_TAG% .
 
                     docker tag %IMAGE_NAME%:%IMAGE_TAG% %IMAGE_NAME%:latest
-                """
+                '''
             }
         }
 
@@ -77,8 +77,8 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
 
-                    bat """
-                        docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                    bat '''
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
 
                         docker tag %IMAGE_NAME%:latest %DOCKERHUB_USER%/%IMAGE_NAME%:latest
 
@@ -87,7 +87,7 @@ pipeline {
                         docker push %DOCKERHUB_USER%/%IMAGE_NAME%:latest
 
                         docker push %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
-                    """
+                    '''
                 }
             }
         }
@@ -118,11 +118,11 @@ pipeline {
         always {
             echo 'Cleaning up Docker images...'
 
-            bat """
+            bat '''
                 docker rmi -f %IMAGE_NAME%:%IMAGE_TAG% || ver > nul
 
                 docker rmi -f %IMAGE_NAME%:latest || ver > nul
-            """
+            '''
         }
     }
 }
