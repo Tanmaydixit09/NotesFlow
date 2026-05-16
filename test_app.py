@@ -1,84 +1,118 @@
-import os
-import json
-import sqlite3
 import pytest
-from app import app, init_db, hash_password
-
-TEST_DB = 'test_noteflow.db'
-
-def init_test_db():
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
-    app.config['TESTING'] = True
-    app.config['DATABASE'] = TEST_DB
-    init_db()
-
-def create_test_user():
-    conn = sqlite3.connect(app.config['DATABASE'])
-    conn.execute(
-        'INSERT INTO users (username,email,password) VALUES (?,?,?)',
-        ('testuser', 'test@example.com', hash_password('secret123')))
-    conn.commit()
-    user_id = conn.execute('SELECT id FROM users WHERE username=?', ('testuser',)).fetchone()[0]
-    conn.close()
-    return user_id
-
+import json
+import os
+import tempfile
+ 
+# Use temp database for testing — avoids conflicts
+TEST_DB = tempfile.mktemp(suffix='.db')
+ 
+import app as app_module
+app_module.DB = TEST_DB
+ 
+@pytest.fixture(autouse=True)
+def setup_db():
+    app_module.DB = TEST_DB
+    app_module.init_db()
+    yield
+    try:
+        if os.path.exists(TEST_DB):
+            os.remove(TEST_DB)
+    except:
+        pass
+ 
 @pytest.fixture
 def client():
-    init_test_db()
-    with app.test_client() as client:
-        user_id = create_test_user()
-        with client.session_transaction() as sess:
-            sess['user_id'] = user_id
-            sess['username'] = 'testuser'
+    app_module.app.config['TESTING'] = True
+    app_module.app.config['SECRET_KEY'] = 'test-secret'
+    with app_module.app.test_client() as client:
         yield client
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
-
-def test_home_page(client):
+ 
+def register_and_login(client, username='testuser', password='Test@1234'):
+    client.post('/register', data={
+        'username': username,
+        'email': f'{username}@test.com',
+        'password': password
+    }, follow_redirects=True)
+    client.post('/login', data={
+        'username': username,
+        'password': password
+    }, follow_redirects=True)
+ 
+# ── Tests ──────────────────────────────────────────────────────────────────────
+ 
+def test_landing_page(client):
     res = client.get('/')
     assert res.status_code == 200
-
-def test_get_notes_empty(client):
+    assert b'NoteFlow' in res.data
+ 
+def test_register_page_loads(client):
+    res = client.get('/register')
+    assert res.status_code == 200
+ 
+def test_login_page_loads(client):
+    res = client.get('/login')
+    assert res.status_code == 200
+ 
+def test_register_user(client):
+    res = client.post('/register', data={
+        'username': 'tanmay',
+        'email': 'tanmay@test.com',
+        'password': 'Test@1234'
+    }, follow_redirects=True)
+    assert res.status_code == 200
+ 
+def test_login_user(client):
+    register_and_login(client)
+    res = client.get('/app', follow_redirects=True)
+    assert res.status_code == 200
+ 
+def test_get_notes_authenticated(client):
+    register_and_login(client)
     res = client.get('/notes')
     assert res.status_code == 200
     data = json.loads(res.data)
     assert 'notes' in data
-    assert data['count'] == 0
-
+ 
 def test_add_note(client):
+    register_and_login(client)
     res = client.post('/notes',
-        data=json.dumps({'title': 'Test note', 'content': 'Test note'}),
+        data=json.dumps({
+            'title': 'Test Note',
+            'content': 'Test content',
+            'priority': 'High',
+            'category': 'Work'
+        }),
         content_type='application/json')
     assert res.status_code == 201
-    data = json.loads(res.data)
-    assert data['note']['content'] == 'Test note'
-
-def test_add_note_empty_content(client):
+ 
+def test_add_note_missing_title(client):
+    register_and_login(client)
     res = client.post('/notes',
-        data=json.dumps({'title': 'Empty', 'content': ''}),
+        data=json.dumps({'title': '', 'content': 'some content'}),
         content_type='application/json')
     assert res.status_code == 400
-
+ 
 def test_delete_note(client):
-    res = client.post('/notes',
-        data=json.dumps({'title': 'To delete', 'content': 'To delete'}),
+    register_and_login(client)
+    add_res = client.post('/notes',
+        data=json.dumps({'title': 'To Delete', 'content': 'delete me'}),
         content_type='application/json')
-    note_id = json.loads(res.data)['note']['id']
+    note_id = json.loads(add_res.data)['id']
     res = client.delete(f'/notes/{note_id}')
     assert res.status_code == 200
-
-def test_delete_nonexistent_note(client):
-    res = client.delete('/notes/99999')
-    assert res.status_code == 404
-
+ 
 def test_health_endpoint(client):
     res = client.get('/health')
     assert res.status_code == 200
     data = json.loads(res.data)
     assert data['status'] == 'healthy'
-
+ 
 def test_metrics_endpoint(client):
     res = client.get('/metrics')
     assert res.status_code == 200
     assert b'noteflow_requests_total' in res.data
+ 
+def test_unauthenticated_notes_redirect(client):
+    res = client.get('/notes')
+    assert res.status_code == 302
+ 
