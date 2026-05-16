@@ -11,65 +11,65 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo '📥 Checking out code from GitHub...'
+                echo 'Checking out code from GitHub...'
                 checkout scm
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                echo '📦 Installing Python dependencies...'
+                echo 'Installing Python dependencies...'
 
-                sh '''
-                    python3 -m pip install --break-system-packages --upgrade pip
+                bat '''
+                    python -m pip install --upgrade pip
 
-                    pip3 install --break-system-packages -r requirements.txt
+                    pip install -r requirements.txt
 
-                    pip3 install --break-system-packages pytest
+                    pip install pytest
                 '''
             }
         }
 
         stage('Initialize Database') {
             steps {
-                echo '🗄️ Initializing SQLite database...'
+                echo 'Initializing SQLite database...'
 
-                sh '''
-                    if [ -f init_db.py ]; then
-                        python3 init_db.py
-                    else
-                        echo "❌ init_db.py not found!"
-                        exit 1
-                    fi
+                bat '''
+                    IF EXIST init_db.py (
+                        python init_db.py
+                    ) ELSE (
+                        echo init_db.py not found!
+                        exit /b 1
+                    )
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo '🧪 Running unit tests...'
+                echo 'Running unit tests...'
 
-                sh '''
-                    python3 -m pytest test_app.py -v --tb=short
+                bat '''
+                    python -m pytest test_app.py -v --tb=short
                 '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo '🐳 Building Docker image...'
+                echo 'Building Docker image...'
 
-                sh """
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                bat """
+                    docker build -t %IMAGE_NAME%:%IMAGE_TAG% .
 
-                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    docker tag %IMAGE_NAME%:%IMAGE_TAG% %IMAGE_NAME%:latest
                 """
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo '🚀 Pushing image to Docker Hub...'
+                echo 'Pushing image to Docker Hub...'
 
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-credentials',
@@ -77,16 +77,16 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
 
-                    sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                    bat """
+                        docker login -u %DOCKER_USER% -p %DOCKER_PASS%
 
-                        docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
+                        docker tag %IMAGE_NAME%:latest %DOCKERHUB_USER%/%IMAGE_NAME%:latest
 
-                        docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag %IMAGE_NAME%:latest %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
 
-                        docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
+                        docker push %DOCKERHUB_USER%/%IMAGE_NAME%:latest
 
-                        docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
                     """
                 }
             }
@@ -94,12 +94,12 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                echo '☸️ Deploying to Kubernetes...'
+                echo 'Deploying to Kubernetes...'
 
-                sh '''
-                    kubectl apply -f k8s/deployment.yaml
+                bat '''
+                    kubectl apply -f k8s\\deployment.yaml
 
-                    kubectl apply -f k8s/service.yaml
+                    kubectl apply -f k8s\\service.yaml
                 '''
             }
         }
@@ -108,20 +108,20 @@ pipeline {
     post {
 
         success {
-            echo '✅ Pipeline completed successfully!'
+            echo 'Pipeline completed successfully!'
         }
 
         failure {
-            echo '❌ Pipeline failed. Check logs for details.'
+            echo 'Pipeline failed. Check logs for details.'
         }
 
         always {
-            echo '🧹 Cleaning up Docker images...'
+            echo 'Cleaning up Docker images...'
 
-            sh """
-                docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG} || true
+            bat """
+                docker rmi -f %IMAGE_NAME%:%IMAGE_TAG% || ver > nul
 
-                docker rmi -f ${IMAGE_NAME}:latest || true
+                docker rmi -f %IMAGE_NAME%:latest || ver > nul
             """
         }
     }
