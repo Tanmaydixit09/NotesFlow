@@ -5,6 +5,8 @@ pipeline {
         IMAGE_NAME     = 'noteflow-app'
         IMAGE_TAG      = "${BUILD_NUMBER}"
         DOCKERHUB_USER = 'tanmaydixit09'
+
+        PYTHON_PATH = 'C:\\Users\\Tanmay\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
     }
 
     stages {
@@ -20,13 +22,13 @@ pipeline {
             steps {
                 echo 'Installing Python dependencies...'
 
-                bat '''
-                    py -m pip install --upgrade pip
+                bat """
+                    "%PYTHON_PATH%" -m pip install --upgrade pip
 
-                    py -m pip install -r requirements.txt
+                    "%PYTHON_PATH%" -m pip install -r requirements.txt
 
-                    py -m pip install pytest
-                '''
+                    "%PYTHON_PATH%" -m pip install pytest
+                """
             }
         }
 
@@ -34,14 +36,14 @@ pipeline {
             steps {
                 echo 'Initializing SQLite database...'
 
-                bat '''
+                bat """
                     if exist init_db.py (
-                        py init_db.py
+                        "%PYTHON_PATH%" init_db.py
                     ) else (
                         echo init_db.py not found!
                         exit /b 1
                     )
-                '''
+                """
             }
         }
 
@@ -49,9 +51,9 @@ pipeline {
             steps {
                 echo 'Running unit tests...'
 
-                bat '''
-                    py -m pytest test_app.py -v --tb=short
-                '''
+                bat """
+                    "%PYTHON_PATH%" -m pytest test_app.py -v --tb=short
+                """
             }
         }
 
@@ -59,11 +61,11 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
 
-                bat '''
+                bat """
                     docker build -t %IMAGE_NAME%:%IMAGE_TAG% .
 
                     docker tag %IMAGE_NAME%:%IMAGE_TAG% %IMAGE_NAME%:latest
-                '''
+                """
             }
         }
 
@@ -77,7 +79,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
 
-                    bat '''
+                    bat """
                         echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
 
                         docker tag %IMAGE_NAME%:latest %DOCKERHUB_USER%/%IMAGE_NAME%:latest
@@ -87,7 +89,7 @@ pipeline {
                         docker push %DOCKERHUB_USER%/%IMAGE_NAME%:latest
 
                         docker push %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%
-                    '''
+                    """
                 }
             }
         }
@@ -96,11 +98,11 @@ pipeline {
             steps {
                 echo 'Deploying to Kubernetes...'
 
-                bat '''
+                bat """
                     kubectl apply -f k8s\\deployment.yaml
 
                     kubectl apply -f k8s\\service.yaml
-                '''
+                """
             }
         }
     }
@@ -118,11 +120,11 @@ pipeline {
         always {
             echo 'Cleaning up Docker images...'
 
-            bat '''
-                docker rmi -f %IMAGE_NAME%:%IMAGE_TAG% || ver > nul
+            bat """
+                docker rmi -f %IMAGE_NAME%:%IMAGE_TAG% || ver >nul
 
-                docker rmi -f %IMAGE_NAME%:latest || ver > nul
-            '''
+                docker rmi -f %IMAGE_NAME%:latest || ver >nul
+            """
         }
     }
 }
