@@ -19,9 +19,12 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo '📦 Installing Python dependencies...'
+
                 sh '''
                     python3 -m pip install --break-system-packages --upgrade pip
+
                     pip3 install --break-system-packages -r requirements.txt
+
                     pip3 install --break-system-packages pytest
                 '''
             }
@@ -30,8 +33,14 @@ pipeline {
         stage('Initialize Database') {
             steps {
                 echo '🗄️ Initializing SQLite database...'
+
                 sh '''
-                    python3 init_db.py || true
+                    if [ -f init_db.py ]; then
+                        python3 init_db.py
+                    else
+                        echo "❌ init_db.py not found!"
+                        exit 1
+                    fi
                 '''
             }
         }
@@ -39,6 +48,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 echo '🧪 Running unit tests...'
+
                 sh '''
                     python3 -m pytest test_app.py -v --tb=short
                 '''
@@ -48,8 +58,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Building Docker image...'
+
                 sh """
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+
                     docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
                 """
             }
@@ -66,12 +78,14 @@ pipeline {
                 )]) {
 
                     sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
 
                         docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
+
                         docker tag ${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
 
                         docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
+
                         docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                     """
                 }
@@ -81,8 +95,10 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo '☸️ Deploying to Kubernetes...'
+
                 sh '''
                     kubectl apply -f k8s/deployment.yaml
+
                     kubectl apply -f k8s/service.yaml
                 '''
             }
@@ -103,8 +119,9 @@ pipeline {
             echo '🧹 Cleaning up Docker images...'
 
             sh """
-                docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
-                docker rmi ${IMAGE_NAME}:latest || true
+                docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG} || true
+
+                docker rmi -f ${IMAGE_NAME}:latest || true
             """
         }
     }
