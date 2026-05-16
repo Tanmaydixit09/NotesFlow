@@ -3,15 +3,17 @@ import json
 import os
 import tempfile
 
-# Temporary database for testing
+# Temporary DB for tests
 TEST_DB = tempfile.mktemp(suffix='.db')
 
 import app as app_module
 
-# Use test database
 app_module.DB = TEST_DB
 
 
+# ─────────────────────────────────────────────
+# Setup / Cleanup
+# ─────────────────────────────────────────────
 @pytest.fixture(autouse=True)
 def setup_db():
     app_module.DB = TEST_DB
@@ -26,17 +28,28 @@ def setup_db():
         pass
 
 
+# ─────────────────────────────────────────────
+# Test Client
+# ─────────────────────────────────────────────
 @pytest.fixture
 def client():
     app_module.app.config['TESTING'] = True
     app_module.app.config['SECRET_KEY'] = 'test-secret'
 
+    # DISABLE RATE LIMITING
+    app_module.app.config['RATELIMIT_ENABLED'] = False
+
     with app_module.app.test_client() as client:
         yield client
 
 
-# Helper function
-def register_and_login(client, username='testuser', password='Test@1234'):
+# ─────────────────────────────────────────────
+# Helper Function
+# ─────────────────────────────────────────────
+def register_and_login(client,
+                       username='testuser',
+                       password='Test@1234'):
+
     client.post(
         '/register',
         data={
@@ -57,8 +70,9 @@ def register_and_login(client, username='testuser', password='Test@1234'):
     )
 
 
-# ---------------- TESTS ---------------- #
-
+# ─────────────────────────────────────────────
+# Tests
+# ─────────────────────────────────────────────
 def test_landing_page(client):
     res = client.get('/')
     assert res.status_code == 200
@@ -100,11 +114,11 @@ def test_login_user(client):
 def test_get_notes_authenticated(client):
     register_and_login(client)
 
-    res = client.get('/notes', follow_redirects=True)
+    res = client.get('/notes')
 
     assert res.status_code == 200
 
-    data = json.loads(res.get_data(as_text=True))
+    data = json.loads(res.data)
 
     assert 'notes' in data
 
@@ -120,8 +134,7 @@ def test_add_note(client):
             'priority': 'High',
             'category': 'Work'
         }),
-        content_type='application/json',
-        follow_redirects=True
+        content_type='application/json'
     )
 
     assert res.status_code in [200, 201]
@@ -136,8 +149,7 @@ def test_add_note_missing_title(client):
             'title': '',
             'content': 'some content'
         }),
-        content_type='application/json',
-        follow_redirects=True
+        content_type='application/json'
     )
 
     assert res.status_code == 400
@@ -146,38 +158,32 @@ def test_add_note_missing_title(client):
 def test_delete_note(client):
     register_and_login(client)
 
-    # Add note
     add_res = client.post(
         '/notes',
         data=json.dumps({
             'title': 'To Delete',
             'content': 'delete me'
         }),
-        content_type='application/json',
-        follow_redirects=True
+        content_type='application/json'
     )
 
     assert add_res.status_code in [200, 201]
 
-    # Fetch notes
-    notes_res = client.get('/notes', follow_redirects=True)
+    notes_res = client.get('/notes')
 
     assert notes_res.status_code == 200
 
-    data = json.loads(notes_res.get_data(as_text=True))
+    data = json.loads(notes_res.data)
 
-    assert 'notes' in data
-    assert len(data['notes']) > 0
+    notes = data['notes']
 
-    note_id = data['notes'][0]['id']
+    assert len(notes) > 0
 
-    # Delete note
-    delete_res = client.delete(
-        f'/notes/{note_id}',
-        follow_redirects=True
-    )
+    note_id = notes[0]['id']
 
-    assert delete_res.status_code == 200
+    res = client.delete(f'/notes/{note_id}')
+
+    assert res.status_code == 200
 
 
 def test_health_endpoint(client):
@@ -185,7 +191,7 @@ def test_health_endpoint(client):
 
     assert res.status_code == 200
 
-    data = json.loads(res.get_data(as_text=True))
+    data = json.loads(res.data)
 
     assert data['status'] == 'healthy'
 
@@ -194,6 +200,7 @@ def test_metrics_endpoint(client):
     res = client.get('/metrics')
 
     assert res.status_code == 200
+
     assert b'noteflow_requests_total' in res.data
 
 
