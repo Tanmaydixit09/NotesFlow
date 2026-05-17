@@ -1201,7 +1201,10 @@ def index():
     conn = get_db()
     user = conn.execute('SELECT username FROM users WHERE id=?', (session['user_id'],)).fetchone()
     conn.close()
-    return render_template_string(MAIN_TEMPLATE, username=user['username'])
+   return render_template_string(
+    MAIN_TEMPLATE,
+    username=user['username'] if user else "Guest"
+)
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 @app.route('/register', methods=['GET','POST'])
