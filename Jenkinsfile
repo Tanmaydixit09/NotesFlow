@@ -31,13 +31,13 @@ pipeline {
         }
  
         stage('Run Tests') {
-            steps {
-                echo '🧪 Running unit tests...'
-                bat """
-                    "%PYTHON%" -m pytest test_app.py -v --tb=short
-                """
-            }
-        }
+    steps {
+        bat '''
+        set TESTING=1
+        "%PYTHON%" -m pytest test_app.py -v --tb=short
+        '''
+    }
+}
  
         stage('Build Docker Image') {
             steps {
