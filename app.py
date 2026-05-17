@@ -11,8 +11,22 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'noteflow-ultra-secret-2025')
 DB = 'noteflow.db'
 
+# ── TESTING MODE ──────────────────────────────────────────────────────────────
+TESTING = os.environ.get("TESTING") == "1"
+
 # ── Rate Limiter ──────────────────────────────────────────────────────────────
-limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
+if TESTING:
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        enabled=False
+    )
+else:
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=["200 per day", "50 per hour"]
+    )
 
 # ── Prometheus Metrics ────────────────────────────────────────────────────────
 REQUEST_COUNT = Counter('noteflow_requests_total',  'Total HTTP requests',   ['method', 'endpoint'])
