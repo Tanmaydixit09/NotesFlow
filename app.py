@@ -1497,6 +1497,7 @@ def export_json():
 
 # ── System ────────────────────────────────────────────────────────────────────
 @app.route('/health')
+@limiter.exempt
 def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()}), 200
 
