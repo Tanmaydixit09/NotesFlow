@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: noteflow-deployment
+  labels:
+    app: noteflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: noteflow
+  template:
+    metadata:
+      labels:
+        app: noteflow
+    spec:
+      containers:
+        - name: noteflow
+          image: tanmaydixit09/noteflow-app:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: noteflow-secret
+                  key: secret-key
+            - name: FLASK_ENV
+              value: "production"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
