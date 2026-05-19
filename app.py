@@ -11,22 +11,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'noteflow-ultra-secret-2025')
 DB = 'noteflow.db'
 
-# ── TESTING MODE ──────────────────────────────────────────────────────────────
-TESTING = os.environ.get("TESTING") == "1"
-
 # ── Rate Limiter ──────────────────────────────────────────────────────────────
-if TESTING:
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        enabled=False
-    )
-else:
-    limiter = Limiter(
-        get_remote_address,
-        app=app,
-        default_limits=["200 per day", "50 per hour"]
-    )
+limiter = Limiter(get_remote_address, app=app, default_limits=["200 per day", "50 per hour"])
 
 # ── Prometheus Metrics ────────────────────────────────────────────────────────
 REQUEST_COUNT = Counter('noteflow_requests_total',  'Total HTTP requests',   ['method', 'endpoint'])
@@ -223,153 +209,170 @@ LANDING_TEMPLATE = """
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NoteFlow — Smart Note Management</title>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e2e8f0; overflow-x: hidden; }
-a { text-decoration: none; color: inherit; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#070b11;color:#e2e8f0;overflow-x:hidden;}
+a{text-decoration:none;color:inherit;}
 
-/* Nav */
-nav {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0 48px; height: 60px;
-  background: rgba(10,10,15,0.8);
-  border-bottom: 1px solid #1e2530;
-  position: sticky; top: 0; z-index: 100;
-  backdrop-filter: blur(12px);
+/* ── HERO BACKGROUND IMAGE ──────────────────────────── */
+.hero-section{
+  min-height:100vh;
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:100px 24px 80px;
+  /* Unsplash - dark abstract tech background */
+  background-image:
+    linear-gradient(to bottom, rgba(7,11,17,0.55) 0%, rgba(7,11,17,0.75) 60%, rgba(7,11,17,1) 100%),
+    url('https://images.unsplash.com/photo-1518770660439-4636190af475?w=1600&q=80&fit=crop');
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
 }
-.nav-brand { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #f0f6fc; }
-.nav-icon { width: 28px; height: 28px; background: linear-gradient(135deg,#388bfd,#7c3aed); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
-.nav-links { display: flex; gap: 10px; }
-.btn-ghost { padding: 8px 18px; border: 1px solid #30363d; color: #8b949e; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; transition: all .2s; }
-.btn-ghost:hover { border-color: #388bfd; color: #388bfd; background: rgba(56,139,253,.05); }
-.btn-solid { padding: 8px 18px; background: linear-gradient(135deg,#388bfd,#7c3aed); color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: opacity .2s, transform .15s; box-shadow: 0 2px 12px rgba(56,139,253,.3); }
-.btn-solid:hover { opacity: .9; transform: translateY(-1px); }
 
-/* Hero */
-.hero {
-  min-height: 90vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; padding: 80px 24px 60px;
-  background:
-    radial-gradient(ellipse 60% 50% at 20% 40%, rgba(56,139,253,.06) 0%, transparent 100%),
-    radial-gradient(ellipse 50% 60% at 80% 30%, rgba(124,58,237,.05) 0%, transparent 100%),
-    radial-gradient(ellipse 40% 50% at 60% 80%, rgba(63,185,80,.04) 0%, transparent 100%);
-  position: relative;
+/* ── NAVBAR ─────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 48px;height:60px;
+  background:rgba(7,11,17,0.7);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  backdrop-filter:blur(16px);
 }
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(56,139,253,.08); border: 1px solid rgba(56,139,253,.2);
-  color: #388bfd; padding: 5px 14px; border-radius: 20px;
-  font-size: 12px; font-weight: 500; margin-bottom: 24px;
-  animation: fadeDown .5s ease;
-}
-.hero h1 {
-  font-size: clamp(2rem,5vw,3.5rem); font-weight: 800;
-  color: #f0f6fc; line-height: 1.1; margin-bottom: 18px;
-  letter-spacing: -1px; animation: fadeDown .55s ease .05s both;
-}
-.hero h1 .grad { background: linear-gradient(135deg,#388bfd,#a78bfa,#3fb950); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hero-p {
-  font-size: 1rem; color: #7d8590; max-width: 520px;
-  line-height: 1.8; margin-bottom: 36px;
-  animation: fadeDown .55s ease .1s both;
-}
-.hero-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; animation: fadeDown .55s ease .15s both; }
-.btn-hero-p {
-  padding: 13px 30px; background: linear-gradient(135deg,#388bfd,#7c3aed);
-  color: #fff; border: none; border-radius: 9px; font-size: 14px;
-  font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(56,139,253,.35);
-  transition: all .2s; letter-spacing: -.2px;
-}
-.btn-hero-p:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(56,139,253,.45); }
-.btn-hero-s {
-  padding: 13px 30px; background: transparent;
-  color: #c9d1d9; border: 1px solid #30363d; border-radius: 9px;
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
-}
-.btn-hero-s:hover { border-color: #8b949e; color: #f0f6fc; }
+.nav-brand{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:#f0f6fc;}
+.nav-icon{width:28px;height:28px;background:linear-gradient(135deg,#388bfd,#7c3aed);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.nav-links{display:flex;gap:10px;}
+.btn-ghost{padding:7px 18px;border:1px solid rgba(255,255,255,0.12);color:#8b949e;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:transparent;transition:all .2s;}
+.btn-ghost:hover{border-color:#388bfd;color:#388bfd;}
+.btn-solid{padding:7px 18px;background:linear-gradient(135deg,#388bfd,#7c3aed);color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;box-shadow:0 2px 12px rgba(56,139,253,.35);transition:all .2s;}
+.btn-solid:hover{opacity:.9;transform:translateY(-1px);}
 
-/* App preview mockup */
-.mockup-wrap {
-  margin: 60px auto 0; max-width: 700px; width: 100%;
-  animation: fadeUp .7s ease .2s both; padding: 0 20px;
+/* ── HERO CONTENT ───────────────────────────────────── */
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(56,139,253,.12);border:1px solid rgba(56,139,253,.25);
+  color:#388bfd;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:500;
+  margin-bottom:24px;backdrop-filter:blur(8px);
+  animation:fadeDown .5s ease;
 }
-.mockup-window {
-  background: #0d1117; border: 1px solid #30363d; border-radius: 14px;
-  overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03);
+.hero h1{
+  font-size:clamp(2.2rem,5.5vw,3.8rem);font-weight:800;
+  color:#f0f6fc;line-height:1.1;margin-bottom:18px;
+  letter-spacing:-1.5px;
+  animation:fadeDown .55s ease .05s both;
+  text-shadow:0 2px 20px rgba(0,0,0,.5);
 }
-.mockup-bar {
-  background: #161b22; border-bottom: 1px solid #21262d;
-  padding: 11px 16px; display: flex; align-items: center; gap: 7px;
+.hero h1 .grad{
+  background:linear-gradient(135deg,#388bfd,#a78bfa,#3fb950);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
 }
-.dot { width: 10px; height: 10px; border-radius: 50%; }
-.mockup-url { font-size: 11px; color: #484f58; margin-left: 8px; }
-.mockup-body { padding: 18px; }
-.m-note { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-.m-note.pin { border-color: rgba(56,139,253,.3); }
-.m-note-l .m-title { font-size: 13px; font-weight: 500; color: #c9d1d9; margin-bottom: 5px; }
-.m-tags { display: flex; gap: 5px; }
-.m-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; border: 1px solid #30363d; color: #8b949e; }
-.m-tag.r { background: rgba(248,81,73,.08); border-color: rgba(248,81,73,.3); color: #f85149; }
-.m-tag.b { background: rgba(56,139,253,.08); border-color: rgba(56,139,253,.3); color: #388bfd; }
-.m-tag.g { background: rgba(63,185,80,.08); border-color: rgba(63,185,80,.3); color: #3fb950; }
-.m-stats { display: flex; gap: 8px; margin-top: 10px; }
-.m-stat { flex: 1; background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 8px; text-align: center; }
-.m-stat-v { font-size: 16px; font-weight: 600; }
-.m-stat-l { font-size: 10px; color: #484f58; }
-
-/* Features */
-.features { padding: 100px 24px; background: #0d1117; border-top: 1px solid #1e2530; border-bottom: 1px solid #1e2530; }
-.sec-title { text-align: center; font-size: clamp(1.4rem,3vw,1.9rem); font-weight: 700; color: #f0f6fc; margin-bottom: 8px; letter-spacing: -.5px; }
-.sec-sub { text-align: center; color: #7d8590; font-size: 14px; margin-bottom: 52px; }
-.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 16px; max-width: 860px; margin: 0 auto; }
-.feat-card {
-  background: #161b22; border: 1px solid #21262d; border-radius: 12px;
-  padding: 22px; transition: all .25s; cursor: default;
+.hero-p{
+  font-size:1.05rem;color:rgba(226,232,240,0.75);max-width:540px;
+  line-height:1.8;margin-bottom:36px;
+  animation:fadeDown .55s ease .1s both;
+  text-shadow:0 1px 8px rgba(0,0,0,.5);
 }
-.feat-card:hover { border-color: #388bfd44; background: #1c2128; transform: translateY(-3px); }
-.feat-card-icon { font-size: 22px; margin-bottom: 10px; }
-.feat-card-title { font-size: 14px; font-weight: 600; color: #c9d1d9; margin-bottom: 6px; }
-.feat-card-desc { font-size: 12.5px; color: #7d8590; line-height: 1.6; }
-
-/* Tech stack */
-.stack { padding: 80px 24px; text-align: center; }
-.stack-tags { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 600px; margin: 0 auto; }
-.stack-tag { padding: 6px 16px; background: #161b22; border: 1px solid #30363d; border-radius: 20px; font-size: 12.5px; color: #8b949e; }
-
-/* CTA */
-.cta { padding: 100px 24px; text-align: center; }
-.cta-inner {
-  max-width: 580px; margin: 0 auto;
-  background: linear-gradient(135deg, rgba(56,139,253,.06), rgba(124,58,237,.06));
-  border: 1px solid rgba(56,139,253,.15); border-radius: 18px; padding: 56px 40px;
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;animation:fadeDown .55s ease .15s both;}
+.btn-hero-p{
+  padding:13px 32px;background:linear-gradient(135deg,#388bfd,#7c3aed);
+  color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;
+  cursor:pointer;box-shadow:0 6px 24px rgba(56,139,253,.45);transition:all .25s;
 }
-.cta h2 { font-size: clamp(1.4rem,3vw,2rem); font-weight: 700; color: #f0f6fc; margin-bottom: 10px; letter-spacing: -.5px; }
-.cta p { color: #7d8590; font-size: 14px; margin-bottom: 28px; }
+.btn-hero-p:hover{transform:translateY(-2px);box-shadow:0 10px 36px rgba(56,139,253,.55);}
+.btn-hero-s{
+  padding:13px 32px;background:rgba(255,255,255,.06);
+  color:#e2e8f0;border:1px solid rgba(255,255,255,.15);border-radius:10px;
+  font-size:15px;font-weight:600;cursor:pointer;backdrop-filter:blur(8px);transition:all .2s;
+}
+.btn-hero-s:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);}
 
-footer { text-align: center; padding: 24px; border-top: 1px solid #1e2530; font-size: 12px; color: #484f58; }
+/* ── APP MOCKUP ─────────────────────────────────────── */
+.mockup-wrap{
+  margin:52px auto 0;max-width:680px;width:100%;
+  padding:0 20px;animation:fadeUp .7s ease .2s both;
+}
+.mockup-window{
+  background:rgba(13,17,23,0.85);
+  border:1px solid rgba(255,255,255,0.1);border-radius:14px;
+  overflow:hidden;backdrop-filter:blur(12px);
+  box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04),inset 0 1px 0 rgba(255,255,255,.06);
+}
+.mockup-bar{background:rgba(22,27,34,0.9);border-bottom:1px solid rgba(255,255,255,.06);padding:11px 16px;display:flex;align-items:center;gap:7px;}
+.dot{width:10px;height:10px;border-radius:50%;}
+.mockup-url{font-size:11px;color:#484f58;margin-left:8px;}
+.mockup-body{padding:16px;}
+.m-note{background:rgba(22,27,34,0.8);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.m-note.pin{border-color:rgba(56,139,253,.3);}
+.m-title{font-size:13px;font-weight:500;color:#c9d1d9;margin-bottom:5px;}
+.m-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.m-tag{font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid rgba(255,255,255,.08);color:#8b949e;}
+.m-tag.r{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.3);color:#f85149;}
+.m-tag.b{background:rgba(56,139,253,.1);border-color:rgba(56,139,253,.3);color:#388bfd;}
+.m-tag.g{background:rgba(63,185,80,.1);border-color:rgba(63,185,80,.3);color:#3fb950;}
+.m-stats{display:flex;gap:8px;margin-top:10px;}
+.m-stat{flex:1;background:rgba(13,17,23,.8);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px;text-align:center;}
+.m-stat-v{font-size:16px;font-weight:600;}
+.m-stat-l{font-size:10px;color:#484f58;}
 
-@keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
-@keyframes fadeUp   { from { opacity:0; transform:translateY(24px);  } to { opacity:1; transform:translateY(0); } }
+/* ── FEATURES SECTION ───────────────────────────────── */
+.features{
+  padding:100px 24px;
+  background-image:
+    linear-gradient(rgba(13,17,23,0.97),rgba(13,17,23,0.97)),
+    url('https://images.unsplash.com/photo-1639322537228-f710d846310a?w=1600&q=60&fit=crop');
+  background-size:cover;background-position:center;
+  border-top:1px solid #1e2530;border-bottom:1px solid #1e2530;
+}
+.sec-title{text-align:center;font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:#f0f6fc;margin-bottom:8px;letter-spacing:-.5px;}
+.sec-sub{text-align:center;color:#7d8590;font-size:14px;margin-bottom:52px;}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;max-width:860px;margin:0 auto;}
+.feat-card{
+  background:rgba(22,27,34,0.7);border:1px solid #21262d;border-radius:12px;padding:24px;
+  transition:all .25s;cursor:default;backdrop-filter:blur(8px);
+}
+.feat-card:hover{border-color:rgba(56,139,253,.35);background:rgba(28,33,40,0.9);transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.3);}
+.feat-icon{font-size:22px;margin-bottom:10px;}
+.feat-title{font-size:14px;font-weight:600;color:#c9d1d9;margin-bottom:6px;}
+.feat-desc{font-size:12.5px;color:#7d8590;line-height:1.6;}
+
+/* ── TECH STACK ─────────────────────────────────────── */
+.stack{padding:80px 24px;text-align:center;}
+.stack-tags{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:640px;margin:0 auto;}
+.stack-tag{padding:7px 18px;background:rgba(22,27,34,0.8);border:1px solid #30363d;border-radius:20px;font-size:12.5px;color:#8b949e;backdrop-filter:blur(4px);transition:all .2s;}
+.stack-tag:hover{border-color:#388bfd44;color:#c9d1d9;}
+
+/* ── CTA ────────────────────────────────────────────── */
+.cta{
+  padding:100px 24px;
+  background-image:
+    linear-gradient(rgba(7,11,17,0.88),rgba(7,11,17,0.92)),
+    url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1600&q=60&fit=crop');
+  background-size:cover;background-position:center;background-attachment:fixed;
+  text-align:center;
+}
+.cta-inner{max-width:580px;margin:0 auto;background:rgba(13,17,23,0.6);border:1px solid rgba(56,139,253,.15);border-radius:18px;padding:56px 40px;backdrop-filter:blur(16px);}
+.cta h2{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:700;color:#f0f6fc;margin-bottom:10px;letter-spacing:-.5px;}
+.cta p{color:#7d8590;font-size:14px;margin-bottom:28px;}
+
+footer{text-align:center;padding:24px;border-top:1px solid #1e2530;font-size:12px;color:#484f58;}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="nav-brand">
-    <div class="nav-icon">⚡</div>
-    NoteFlow
-  </div>
+  <div class="nav-brand"><div class="nav-icon">⚡</div>NoteFlow</div>
   <div class="nav-links">
     <a href="/login"><button class="btn-ghost">Sign in</button></a>
     <a href="/register"><button class="btn-solid">Get started</button></a>
   </div>
 </nav>
 
-<!-- Hero -->
-<section class="hero">
-  <div class="hero-badge">✦ Built for INT377 — Cloud Computing & DevOps</div>
-  <h1>Capture ideas.<br><span class="grad">Ship them smarter.</span></h1>
-  <p class="hero-p">NoteFlow is a full-stack notes platform with AI summaries, smart tagging, due date tracking, and a production-grade DevOps pipeline — Docker, Kubernetes, Jenkins, Prometheus, Grafana.</p>
+<!-- Hero with background image -->
+<section class="hero-section">
+  <div class="hero-badge">✦ INT377 — Cloud Computing &amp; DevOps Essentials</div>
+  <h1 class="hero">Capture ideas.<br><span class="grad">Ship them smarter.</span></h1>
+  <p class="hero-p">A full-stack notes platform with AI summaries, smart tagging, due date tracking, and a production-grade DevOps pipeline — Docker, Kubernetes, Jenkins, Prometheus, Grafana.</p>
   <div class="hero-btns">
     <a href="/register"><button class="btn-hero-p">🚀 Start for free</button></a>
     <a href="/login"><button class="btn-hero-s">Sign in →</button></a>
@@ -385,35 +388,16 @@ footer { text-align: center; padding: 24px; border-top: 1px solid #1e2530; font-
       </div>
       <div class="mockup-body">
         <div class="m-note pin">
-          <div class="m-note-l">
-            <div class="m-title">📌 DevOps Pipeline Setup — Jenkins + K8s</div>
-            <div class="m-tags">
-              <span class="m-tag r">High</span>
-              <span class="m-tag b">#docker</span>
-              <span class="m-tag b">#jenkins</span>
-              <span class="m-tag r">Due: Tomorrow</span>
-            </div>
-          </div>
+          <div class="m-title">📌 DevOps Pipeline Setup — Jenkins + K8s</div>
+          <div class="m-tags"><span class="m-tag r">High</span><span class="m-tag b">#docker</span><span class="m-tag b">#jenkins</span><span class="m-tag r">Due: Tomorrow</span></div>
         </div>
         <div class="m-note">
-          <div class="m-note-l">
-            <div class="m-title">Kubernetes deployment.yaml — NoteFlow</div>
-            <div class="m-tags">
-              <span class="m-tag">Medium</span>
-              <span class="m-tag b">#k8s</span>
-              <span class="m-tag g">🤖 AI summary ready</span>
-            </div>
-          </div>
+          <div class="m-title">Kubernetes deployment.yaml — NoteFlow</div>
+          <div class="m-tags"><span class="m-tag">Medium</span><span class="m-tag b">#k8s</span><span class="m-tag g">🤖 AI summary ready</span></div>
         </div>
         <div class="m-note">
-          <div class="m-note-l">
-            <div class="m-title">Project Synopsis — NoteFlow DevOps</div>
-            <div class="m-tags">
-              <span class="m-tag">Low</span>
-              <span class="m-tag">Personal</span>
-              <span class="m-tag g">✓ Archived</span>
-            </div>
-          </div>
+          <div class="m-title">Project Synopsis — NoteFlow DevOps</div>
+          <div class="m-tags"><span class="m-tag">Low</span><span class="m-tag">Personal</span><span class="m-tag g">✓ Archived</span></div>
         </div>
         <div class="m-stats">
           <div class="m-stat"><div class="m-stat-v" style="color:#388bfd">12</div><div class="m-stat-l">Active</div></div>
@@ -427,41 +411,17 @@ footer { text-align: center; padding: 24px; border-top: 1px solid #1e2530; font-
   </div>
 </section>
 
-<!-- Features -->
+<!-- Features with bg image -->
 <section class="features">
   <div class="sec-title">Everything in one place</div>
   <div class="sec-sub">Powerful features. Clean interface.</div>
   <div class="feat-grid">
-    <div class="feat-card">
-      <div class="feat-card-icon">🤖</div>
-      <div class="feat-card-title">AI-powered summaries</div>
-      <div class="feat-card-desc">Auto-summarize long notes and detect category using Gemini AI. One click to get the gist.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-card-icon">🏷️</div>
-      <div class="feat-card-title">Smart tagging & tag cloud</div>
-      <div class="feat-card-desc">Add custom tags, visualize a tag cloud, and filter notes by clicking any tag instantly.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-card-icon">📅</div>
-      <div class="feat-card-title">Due dates & overdue alerts</div>
-      <div class="feat-card-desc">Set deadlines. Get real-time overdue alerts highlighted in red on your dashboard.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-card-icon">🔗</div>
-      <div class="feat-card-title">Link related notes</div>
-      <div class="feat-card-desc">Build a knowledge graph by linking any two notes together with one click.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-card-icon">📊</div>
-      <div class="feat-card-title">Analytics & heatmap</div>
-      <div class="feat-card-desc">GitHub-style activity heatmap, productivity score, and category bar charts.</div>
-    </div>
-    <div class="feat-card">
-      <div class="feat-card-icon">🔐</div>
-      <div class="feat-card-title">Secure by design</div>
-      <div class="feat-card-desc">Rate limiting, account lockout after 5 failed attempts, password strength meter.</div>
-    </div>
+    <div class="feat-card"><div class="feat-icon">🤖</div><div class="feat-title">AI-powered summaries</div><div class="feat-desc">Auto-summarize notes and detect category using Gemini AI with one click.</div></div>
+    <div class="feat-card"><div class="feat-icon">🏷️</div><div class="feat-title">Smart tagging</div><div class="feat-desc">Add custom tags, visualize a tag cloud, filter notes by clicking any tag.</div></div>
+    <div class="feat-card"><div class="feat-icon">📅</div><div class="feat-title">Due dates & alerts</div><div class="feat-desc">Set deadlines. Get overdue alerts highlighted in red on your dashboard.</div></div>
+    <div class="feat-card"><div class="feat-icon">🔗</div><div class="feat-title">Link related notes</div><div class="feat-desc">Build a knowledge graph by linking any two notes together.</div></div>
+    <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Analytics & heatmap</div><div class="feat-desc">GitHub-style activity heatmap, productivity score, and charts.</div></div>
+    <div class="feat-card"><div class="feat-icon">🔐</div><div class="feat-title">Secure by design</div><div class="feat-desc">Rate limiting, lockout after 5 failed attempts, password strength meter.</div></div>
   </div>
 </section>
 
@@ -470,31 +430,25 @@ footer { text-align: center; padding: 24px; border-top: 1px solid #1e2530; font-
   <div class="sec-title" style="margin-bottom:8px">Backed by a real DevOps pipeline</div>
   <div class="sec-sub" style="margin-bottom:28px">Every commit triggers a full CI/CD cycle</div>
   <div class="stack-tags">
-    <span class="stack-tag">⚙️ Python Flask</span>
-    <span class="stack-tag">🐳 Docker</span>
-    <span class="stack-tag">☸️ Kubernetes</span>
-    <span class="stack-tag">🔧 Jenkins CI/CD</span>
-    <span class="stack-tag">🏗️ Terraform</span>
-    <span class="stack-tag">📈 Prometheus</span>
-    <span class="stack-tag">📊 Grafana</span>
-    <span class="stack-tag">🗄️ SQLite</span>
+    <span class="stack-tag">⚙️ Python Flask</span><span class="stack-tag">🐳 Docker</span>
+    <span class="stack-tag">☸️ Kubernetes</span><span class="stack-tag">🔧 Jenkins CI/CD</span>
+    <span class="stack-tag">🏗️ Terraform</span><span class="stack-tag">📈 Prometheus</span>
+    <span class="stack-tag">📊 Grafana</span><span class="stack-tag">🗄️ SQLite</span>
     <span class="stack-tag">🔀 Git + GitHub</span>
   </div>
 </section>
 
-<!-- CTA -->
+<!-- CTA with background image -->
 <section class="cta">
   <div class="cta-inner">
-    <div style="font-size:2rem;margin-bottom:12px">⚡</div>
+    <div style="font-size:2.2rem;margin-bottom:12px">⚡</div>
     <h2>Ready to get organized?</h2>
     <p>Create your free account and start building your knowledge base today.</p>
     <a href="/register"><button class="btn-hero-p">Create free account →</button></a>
   </div>
 </section>
 
-<footer>
-  NoteFlow · Built with Flask, Docker, Kubernetes, Jenkins, Prometheus & Grafana · INT377 DevOps Project
-</footer>
+<footer>NoteFlow · Flask · Docker · Kubernetes · Jenkins · Prometheus · Grafana · INT377 DevOps Project</footer>
 
 </body>
 </html>
@@ -508,130 +462,86 @@ AUTH_TEMPLATE = """
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NoteFlow — {{ action }}</title>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; display: flex; overflow: hidden; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#070b11;color:#e2e8f0;min-height:100vh;display:flex;overflow:hidden;}
 
-.nf-left {
-  flex: 1;
-  background: #0d1117;
-  border-right: 1px solid #1e2530;
-  padding: 36px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  position: relative;
-  overflow: hidden;
+/* ── LEFT PANEL with real background image ── */
+.nf-left{
+  flex:1;
+  position:relative;
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:36px 40px;
+  overflow:hidden;
+  background-image:
+    linear-gradient(135deg, rgba(7,11,17,0.65) 0%, rgba(13,17,23,0.8) 100%),
+    url('https://images.unsplash.com/photo-1555066931-4365d14431b9?w=1200&q=80&fit=crop');
+  background-size:cover;background-position:center;
 }
-.nf-left::before {
-  content: '';
-  position: absolute;
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(56,139,253,0.07) 0%, transparent 70%);
-  top: -100px; left: -100px;
-  pointer-events: none;
-}
-.nf-left::after {
-  content: '';
-  position: absolute;
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(124,58,237,0.05) 0%, transparent 70%);
-  bottom: -80px; right: -60px;
-  pointer-events: none;
+.nf-left::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to right, transparent 60%, rgba(7,11,17,0.9) 100%);
+  pointer-events:none;
 }
 
-.brand { display: flex; align-items: center; gap: 8px; }
-.brand-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #388bfd, #7c3aed); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
-.brand-name { font-size: 15px; font-weight: 600; color: #e2e8f0; letter-spacing: -0.3px; }
+.brand{display:flex;align-items:center;gap:8px;position:relative;z-index:2;}
+.brand-icon{width:28px;height:28px;background:linear-gradient(135deg,#388bfd,#7c3aed);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.brand-name{font-size:15px;font-weight:600;color:#f0f6fc;}
 
-.hero-section { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 32px 0; }
-.hero-h1 { font-size: 28px; font-weight: 700; color: #f0f6fc; line-height: 1.25; margin-bottom: 12px; letter-spacing: -0.5px; }
-.hero-h1 span { background: linear-gradient(135deg, #388bfd, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hero-p { font-size: 13.5px; color: #7d8590; line-height: 1.7; margin-bottom: 28px; max-width: 340px; }
+.hero-txt{flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 0;position:relative;z-index:2;}
+.hero-h1{font-size:clamp(1.6rem,2.5vw,2.2rem);font-weight:700;color:#f0f6fc;line-height:1.25;margin-bottom:12px;letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.5);}
+.hero-h1 span{background:linear-gradient(135deg,#388bfd,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero-p{font-size:13.5px;color:rgba(226,232,240,.7);line-height:1.7;margin-bottom:28px;max-width:340px;text-shadow:0 1px 4px rgba(0,0,0,.4);}
 
-.feat { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.feat-dot { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; }
-.feat-text { font-size: 13px; color: #8b949e; }
-.feat-text strong { color: #c9d1d9; font-weight: 500; }
+.feat{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.feat-dot{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;backdrop-filter:blur(4px);}
+.feat-text{font-size:13px;color:rgba(201,209,217,.85);text-shadow:0 1px 4px rgba(0,0,0,.4);}
+.feat-text strong{color:#e2e8f0;}
 
-.note-cards { display: flex; flex-direction: column; gap: 8px; }
-.nc { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 12px 14px; }
-.nc.pinned { border-color: #388bfd44; }
-.nc-title { font-size: 12.5px; font-weight: 500; color: #c9d1d9; margin-bottom: 6px; }
-.nc-tags { display: flex; gap: 5px; flex-wrap: wrap; }
-.nc-tag { font-size: 10.5px; padding: 2px 7px; border-radius: 20px; border: 1px solid #30363d; color: #8b949e; }
-.nc-tag.r { background: rgba(248,81,73,0.1); border-color: rgba(248,81,73,0.3); color: #f85149; }
-.nc-tag.b { background: rgba(56,139,253,0.1); border-color: rgba(56,139,253,0.3); color: #388bfd; }
-.nc-tag.g { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.3); color: #3fb950; }
-.stats-row { display: flex; gap: 8px; margin-top: 8px; }
-.stat { flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 8px 10px; text-align: center; }
-.stat-v { font-size: 17px; font-weight: 600; }
-.stat-l { font-size: 10px; color: #7d8590; margin-top: 1px; }
+.note-preview-area{position:relative;z-index:2;}
+.nc{background:rgba(13,17,23,.75);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin-bottom:8px;backdrop-filter:blur(8px);}
+.nc.pinned{border-color:rgba(56,139,253,.3);}
+.nc-title{font-size:12.5px;font-weight:500;color:#c9d1d9;margin-bottom:6px;}
+.nc-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.nc-tag{font-size:10.5px;padding:2px 7px;border-radius:20px;border:1px solid rgba(255,255,255,.08);color:#8b949e;}
+.nc-tag.r{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.3);color:#f85149;}
+.nc-tag.b{background:rgba(56,139,253,.1);border-color:rgba(56,139,253,.3);color:#388bfd;}
+.nc-tag.g{background:rgba(63,185,80,.1);border-color:rgba(63,185,80,.3);color:#3fb950;}
+.stats-row{display:flex;gap:8px;margin-top:8px;}
+.stat{flex:1;background:rgba(13,17,23,.75);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:8px;text-align:center;backdrop-filter:blur(8px);}
+.stat-v{font-size:17px;font-weight:600;}
+.stat-l{font-size:10px;color:#7d8590;margin-top:1px;}
 
-/* Right panel */
-.nf-right {
-  width: 420px;
-  flex-shrink: 0;
-  background: #0a0a0f;
-  padding: 48px 44px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+/* ── RIGHT PANEL ─────────────────────────── */
+.nf-right{
+  width:420px;flex-shrink:0;
+  background:#0a0a0f;
+  border-left:1px solid rgba(255,255,255,.06);
+  padding:48px 44px;
+  display:flex;flex-direction:column;justify-content:center;
 }
-.form-heading { font-size: 20px; font-weight: 700; color: #f0f6fc; margin-bottom: 4px; letter-spacing: -0.3px; }
-.form-sub { font-size: 13px; color: #7d8590; margin-bottom: 30px; }
+.form-heading{font-size:21px;font-weight:700;color:#f0f6fc;margin-bottom:4px;letter-spacing:-.3px;}
+.form-sub{font-size:13px;color:#7d8590;margin-bottom:30px;}
+.err-box{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25);color:#f85149;padding:10px 14px;border-radius:8px;margin-bottom:18px;font-size:13px;}
+.fld{margin-bottom:16px;}
+.fld label{display:block;font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.fld input{width:100%;background:#161b22;border:1px solid #30363d;color:#e2e8f0;border-radius:8px;padding:11px 14px;font-size:13.5px;outline:none;font-family:inherit;transition:border-color .2s,box-shadow .2s;}
+.fld input:focus{border-color:#388bfd;box-shadow:0 0 0 3px rgba(56,139,253,.12);}
+.str-row{display:flex;gap:4px;margin-top:7px;}
+.s-seg{flex:1;height:3px;border-radius:2px;background:#21262d;transition:background .3s;}
+.str-lbl{font-size:11px;color:#7d8590;margin-top:4px;}
+.submit-btn{width:100%;padding:12px;background:linear-gradient(135deg,#388bfd,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;font-family:inherit;letter-spacing:-.2px;transition:opacity .2s,transform .15s;box-shadow:0 4px 16px rgba(56,139,253,.3);}
+.submit-btn:hover{opacity:.9;transform:translateY(-1px);}
+.or-div{text-align:center;position:relative;margin:18px 0;}
+.or-div::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:#21262d;}
+.or-div span{background:#0a0a0f;padding:0 10px;position:relative;font-size:12px;color:#484f58;}
+.foot-lnk{text-align:center;font-size:13px;color:#7d8590;}
+.foot-lnk a{color:#388bfd;font-weight:500;text-decoration:none;}
+.foot-lnk a:hover{text-decoration:underline;}
 
-.err-box { background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.25); color: #f85149; padding: 10px 14px; border-radius: 8px; margin-bottom: 18px; font-size: 13px; }
+@keyframes slideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+.nf-right{animation:slideIn .35s ease;}
 
-.fld { margin-bottom: 16px; }
-.fld label { display: block; font-size: 11px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-.fld input {
-  width: 100%;
-  background: #161b22;
-  border: 1px solid #30363d;
-  color: #e2e8f0;
-  border-radius: 8px;
-  padding: 11px 14px;
-  font-size: 13.5px;
-  outline: none;
-  font-family: inherit;
-  transition: border-color .2s, box-shadow .2s;
-}
-.fld input:focus { border-color: #388bfd; box-shadow: 0 0 0 3px rgba(56,139,253,0.12); }
-
-.str-row { display: flex; gap: 4px; margin-top: 7px; }
-.s-seg { flex: 1; height: 3px; border-radius: 2px; background: #21262d; transition: background .3s; }
-.str-lbl { font-size: 11px; color: #7d8590; margin-top: 4px; }
-
-.submit-btn {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #388bfd, #7c3aed);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 4px;
-  font-family: inherit;
-  letter-spacing: -0.2px;
-  transition: opacity .2s, transform .15s;
-}
-.submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-.submit-btn:active { transform: translateY(0); }
-
-.or-div { text-align: center; position: relative; margin: 18px 0; }
-.or-div::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #21262d; }
-.or-div span { background: #0a0a0f; padding: 0 10px; position: relative; font-size: 12px; color: #484f58; }
-
-.foot-lnk { text-align: center; font-size: 13px; color: #7d8590; }
-.foot-lnk a { color: #388bfd; font-weight: 500; text-decoration: none; }
-.foot-lnk a:hover { text-decoration: underline; }
-
-@media (max-width: 768px) {
-  .nf-left { display: none; }
-  .nf-right { width: 100%; background: #0d1117; }
-}
+@media(max-width:768px){.nf-left{display:none;}.nf-right{width:100%;border:none;}}
 </style>
 </head>
 <body>
@@ -642,48 +552,24 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; colo
     <span class="brand-name">NoteFlow</span>
   </div>
 
-  <div class="hero-section">
+  <div class="hero-txt">
     <h1 class="hero-h1">Your notes,<br><span>intelligently organized.</span></h1>
     <p class="hero-p">AI summaries, smart tagging, due dates, and a complete DevOps pipeline behind every feature.</p>
-
-    <div class="feat">
-      <div class="feat-dot" style="background:rgba(56,139,253,.15)">🤖</div>
-      <div class="feat-text"><strong>AI summaries</strong> &amp; auto-categorization</div>
-    </div>
-    <div class="feat">
-      <div class="feat-dot" style="background:rgba(63,185,80,.15)">📊</div>
-      <div class="feat-text"><strong>Analytics dashboard</strong> with activity heatmap</div>
-    </div>
-    <div class="feat">
-      <div class="feat-dot" style="background:rgba(210,153,34,.15)">📅</div>
-      <div class="feat-text"><strong>Due dates</strong> &amp; overdue alerts</div>
-    </div>
-    <div class="feat">
-      <div class="feat-dot" style="background:rgba(248,81,73,.15)">🔐</div>
-      <div class="feat-text"><strong>Rate limiting</strong> &amp; account lockout security</div>
-    </div>
-    <div class="feat">
-      <div class="feat-dot" style="background:rgba(167,139,250,.15)">🔗</div>
-      <div class="feat-text"><strong>Link notes</strong>, add tags, export CSV &amp; JSON</div>
-    </div>
+    <div class="feat"><div class="feat-dot" style="background:rgba(56,139,253,.2)">🤖</div><div class="feat-text"><strong>AI summaries</strong> &amp; auto-categorization</div></div>
+    <div class="feat"><div class="feat-dot" style="background:rgba(63,185,80,.2)">📊</div><div class="feat-text"><strong>Analytics dashboard</strong> with activity heatmap</div></div>
+    <div class="feat"><div class="feat-dot" style="background:rgba(210,153,34,.2)">📅</div><div class="feat-text"><strong>Due dates</strong> &amp; overdue alerts</div></div>
+    <div class="feat"><div class="feat-dot" style="background:rgba(248,81,73,.2)">🔐</div><div class="feat-text"><strong>Rate limiting</strong> &amp; account lockout</div></div>
+    <div class="feat"><div class="feat-dot" style="background:rgba(167,139,250,.2)">🔗</div><div class="feat-text"><strong>Link notes</strong>, add tags, export CSV &amp; JSON</div></div>
   </div>
 
-  <div class="note-cards">
+  <div class="note-preview-area">
     <div class="nc pinned">
       <div class="nc-title">📌 DevOps Pipeline Setup</div>
-      <div class="nc-tags">
-        <span class="nc-tag r">High priority</span>
-        <span class="nc-tag b">#docker</span>
-        <span class="nc-tag r">Due tomorrow</span>
-      </div>
+      <div class="nc-tags"><span class="nc-tag r">High</span><span class="nc-tag b">#docker</span><span class="nc-tag r">Due tomorrow</span></div>
     </div>
     <div class="nc">
-      <div class="nc-title">Kubernetes deployment YAML</div>
-      <div class="nc-tags">
-        <span class="nc-tag">Medium</span>
-        <span class="nc-tag b">#k8s</span>
-        <span class="nc-tag g">AI summary ready</span>
-      </div>
+      <div class="nc-title">Kubernetes deployment.yaml</div>
+      <div class="nc-tags"><span class="nc-tag">Medium</span><span class="nc-tag b">#k8s</span><span class="nc-tag g">AI summary ready</span></div>
     </div>
     <div class="stats-row">
       <div class="stat"><div class="stat-v" style="color:#388bfd">12</div><div class="stat-l">Active</div></div>
@@ -697,62 +583,40 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; colo
 <div class="nf-right">
   <div class="form-heading">{{ action }}</div>
   <div class="form-sub">{{ subtitle }}</div>
-
-  {% if error %}
-  <div class="err-box">⚠️ {{ error }}</div>
-  {% endif %}
-
+  {% if error %}<div class="err-box">⚠️ {{ error }}</div>{% endif %}
   <form method="POST">
     {% if show_username %}
-    <div class="fld">
-      <label>Username</label>
-      <input name="username" placeholder="Enter your username" required autocomplete="username">
-    </div>
+    <div class="fld"><label>Username</label><input name="username" placeholder="Enter your username" required autocomplete="username"></div>
     {% endif %}
     {% if show_email %}
-    <div class="fld">
-      <label>Email</label>
-      <input name="email" type="email" placeholder="you@example.com" required>
-    </div>
+    <div class="fld"><label>Email</label><input name="email" type="email" placeholder="you@example.com" required></div>
     {% endif %}
     <div class="fld">
       <label>Password</label>
       <input name="password" type="password" id="passInput" placeholder="Enter your password" required oninput="checkStr(this.value)">
       {% if show_email %}
-      <div class="str-row">
-        <div class="s-seg" id="sg1"></div>
-        <div class="s-seg" id="sg2"></div>
-        <div class="s-seg" id="sg3"></div>
-        <div class="s-seg" id="sg4"></div>
-      </div>
+      <div class="str-row"><div class="s-seg" id="sg1"></div><div class="s-seg" id="sg2"></div><div class="s-seg" id="sg3"></div><div class="s-seg" id="sg4"></div></div>
       <div class="str-lbl" id="strLbl"></div>
       {% endif %}
     </div>
     <button type="submit" class="submit-btn">{{ action }} →</button>
   </form>
-
   <div class="or-div"><span>or</span></div>
   <div class="foot-lnk">{{ link_text }} <a href="{{ link_url }}">{{ link_label }}</a></div>
   <div class="foot-lnk" style="margin-top:8px"><a href="/">← Back to home</a></div>
 </div>
 
 <script>
-function checkStr(p) {
-  const lbl = document.getElementById('strLbl');
-  if (!lbl) return;
-  let s = 0;
-  if (p.length >= 8) s++;
-  if (/[A-Z]/.test(p)) s++;
-  if (/[0-9]/.test(p)) s++;
-  if (/[^A-Za-z0-9]/.test(p)) s++;
-  const colors = ['#f85149','#d29922','#d29922','#3fb950'];
-  const labels = ['Weak','Fair','Good','Strong 💪'];
-  [1,2,3,4].forEach(i => {
-    const el = document.getElementById('sg'+i);
-    el.style.background = i <= s ? colors[s-1] : '#21262d';
-  });
-  lbl.textContent = p.length > 0 ? labels[s-1] || 'Weak' : '';
-  lbl.style.color = colors[s-1] || '#f85149';
+function checkStr(p){
+  const lbl=document.getElementById('strLbl');
+  if(!lbl)return;
+  let s=0;
+  if(p.length>=8)s++;if(/[A-Z]/.test(p))s++;if(/[0-9]/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;
+  const colors=['#f85149','#d29922','#d29922','#3fb950'];
+  const labels=['Weak','Fair','Good','Strong 💪'];
+  [1,2,3,4].forEach(i=>{document.getElementById('sg'+i).style.background=i<=s?colors[s-1]:'#21262d';});
+  lbl.textContent=p.length>0?labels[s-1]||'Weak':'';
+  lbl.style.color=colors[s-1]||'#f85149';
 }
 </script>
 </body>
@@ -1201,10 +1065,7 @@ def index():
     conn = get_db()
     user = conn.execute('SELECT username FROM users WHERE id=?', (session['user_id'],)).fetchone()
     conn.close()
-   return render_template_string(
-    MAIN_TEMPLATE,
-    username=user['username'] if user else "Guest"
-)
+    return render_template_string(MAIN_TEMPLATE, username=user['username'])
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 @app.route('/register', methods=['GET','POST'])
@@ -1505,6 +1366,7 @@ def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()}), 200
 
 @app.route('/metrics')
+@limiter.exempt
 def metrics():
     REQUEST_COUNT.labels(method='GET', endpoint='/metrics').inc()
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
