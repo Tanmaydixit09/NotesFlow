@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template_string, redirect, url
 from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import sqlite3, hashlib, os, csv, json, io, re 
+import sqlite3, hashlib, os, csv, json, io, re
 from datetime import datetime, timedelta
 from functools import wraps
 import jwt as pyjwt
