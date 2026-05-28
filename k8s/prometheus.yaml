@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: prometheus-config
+
 data:
   prometheus.yml: |
     global:
@@ -9,41 +10,70 @@ data:
       evaluation_interval: 15s
 
     scrape_configs:
-      - job_name: 'noteflow'
-        static_configs:
-          - targets: ['noteflow-service:80']
-        metrics_path: '/metrics'
 
+      # Prometheus Monitoring
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
 
+      # NoteFlow Application Monitoring
+      - job_name: 'noteflow'
+        metrics_path: '/metrics'
+        static_configs:
+          - targets: ['noteflow-service:80']
+
+      # Kubernetes Node Monitoring
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+
+      # Kubernetes Pod Monitoring
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+
+      # Kubernetes Service Monitoring
+      - job_name: 'kubernetes-services'
+        kubernetes_sd_configs:
+          - role: service
+
 ---
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: prometheus-deployment
   labels:
     app: prometheus
+
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: prometheus
+
   template:
     metadata:
       labels:
         app: prometheus
+
     spec:
+      serviceAccountName: default
+
       containers:
         - name: prometheus
+
           image: prom/prometheus:latest
+
           ports:
             - containerPort: 9090
+
           volumeMounts:
             - name: prometheus-config
               mountPath: /etc/prometheus/prometheus.yml
               subPath: prometheus.yml
+
       volumes:
         - name: prometheus-config
           configMap:
@@ -52,12 +82,16 @@ spec:
 ---
 apiVersion: v1
 kind: Service
+
 metadata:
   name: prometheus-service
+
 spec:
   type: NodePort
+
   selector:
     app: prometheus
+
   ports:
     - port: 9090
       targetPort: 9090
