@@ -370,7 +370,7 @@ footer{text-align:center;padding:24px;border-top:1px solid #1e2530;font-size:12p
 
 <!-- Hero with background image -->
 <section class="hero-section">
-  <div class="hero-badge">✦ INT377 — Cloud Computing &amp; DevOps Essentials</div>
+  <div class="hero-badge">✦  Cloud Computing &amp; DevOps Essentials</div>
   <h1 class="hero">Capture ideas.<br><span class="grad">Ship them smarter.</span></h1>
   <p class="hero-p">A full-stack notes platform with AI summaries, smart tagging, due date tracking, and a production-grade DevOps pipeline — Docker, Kubernetes, Jenkins, Prometheus, Grafana.</p>
   <div class="hero-btns">
