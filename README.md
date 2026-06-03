@@ -35,6 +35,7 @@ The application is built with Python Flask and includes AI-powered summaries, us
 - 🔒 **Security** — Rate limiting, account lockout after 5 failed attempts, password strength meter
 - 🗄️ **SQLite Database** — Persistent storage with 5 tables (users, notes, tags, note_tags, note_links)
 - 🤖 **AI Assist** — Auto-summarize notes and suggest categories
+
 - 🏷️ **Smart Tagging** — Custom tags, tag cloud, filter by tag
 - 📅 **Due Dates** — Set deadlines, overdue alerts in red
 - 🔗 **Note Linking** — Link related notes together
@@ -117,7 +118,8 @@ docker run -p 5000:5000 -e SECRET_KEY=your-secret noteflow-app
 
 ## ☸️ Kubernetes
 
-Deployed on Minikube with 2 replicas, health checks, resource limits, and secrets management.
+Deployed on Minikube with 2 replicas and secrets management (see `k8s/` manifests).
+
 
 ```bash
 # Apply all configs
@@ -136,7 +138,8 @@ kubectl get pods
 
 ## 📈 Monitoring
 
-**Prometheus** scrapes metrics from `/metrics` endpoint every 15 seconds.
+**Prometheus** scrapes metrics from `/metrics` endpoint (configured in `k8s/prometheus.yaml`).
+
 
 **Custom metrics:**
 - `noteflow_requests_total` — HTTP requests per endpoint
@@ -197,7 +200,8 @@ pytest test_app.py -v
 | Unit I | Git & DevOps | GitHub repo, branching, commits |
 | Unit II | Docker & Kubernetes | Multi-stage Dockerfile, K8s Deployment |
 | Unit III | Terraform IaC | AWS EC2 provisioning scripts |
-| Unit IV | Jenkins CI/CD | Automated 6-stage pipeline |
+| Unit IV | Jenkins CI/CD | Jenkinsfile defines a CI/CD pipeline (Checkout → Install Dependencies → Run Tests → Build Docker Image → Push to Docker Hub → Deploy to Kubernetes) |
+
 | Unit V | Prometheus + Grafana | Live monitoring dashboard |
 | Unit VI | DevSecOps | Rate limiting, secrets, image security |
 

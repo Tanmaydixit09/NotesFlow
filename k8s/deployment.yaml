@@ -14,6 +14,10 @@ spec:
       labels:
         app: noteflow
     spec:
+      volumes:
+        - name: noteflow-data
+          persistentVolumeClaim:
+            claimName: noteflow-pvc
       containers:
         - name: noteflow
           image: tanmaydixit09/noteflow-app:latest
@@ -27,6 +31,13 @@ spec:
                   key: secret-key
             - name: FLASK_ENV
               value: "production"
+            - name: NOTEFLOW_DB
+              value: "/app/data/noteflow.db"
+            - name: FLASK_DEBUG
+              value: "0"
+          volumeMounts:
+            - name: noteflow-data
+              mountPath: /app/data
           readinessProbe:
             httpGet:
               path: /health
@@ -46,3 +57,4 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "200m"
+

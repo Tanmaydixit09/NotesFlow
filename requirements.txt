@@ -3,3 +3,5 @@ prometheus-client==0.20.0
 flask-limiter==3.5.0
 pyjwt==2.8.0
 requests==2.31.0
+bcrypt==4.0.1
+redis==4.6.0
